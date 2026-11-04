@@ -2,7 +2,6 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap">
 <style>
-/* 단일 컬럼 960px. 헤더 KPI → 진행현황(stage bar + 접힘 표) → 업로드 인사이트 */
 :root {
   --bg: #f2f4f7; --card: #fff; --ink: #0b0f19; --sub: #5b6472; --mute: #8b93a1;
   --line: #e6e9ef; --accent: #3182F6; --ac-soft: #eaf2fe; --row: #f7f9fc;
@@ -42,7 +41,24 @@ img{max-width:100%}
 /* layout */
 .wrap{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
 .box{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:24px 26px;min-width:0}
-.hd{border-radius:0 0 16px 16px;padding:30px 30px 22px}
+.hd{border-radius:0 0 16px 16px;padding:30px 30px 0}
+
+/* tabs */
+.tabs{display:flex;gap:4px;margin-top:20px;padding-bottom:0;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab-btn{
+  flex-shrink:0;font-family:var(--font);font-size:13px;font-weight:800;
+  padding:8px 18px;border-radius:10px 10px 0 0;border:1px solid var(--line);border-bottom:none;
+  background:var(--row);color:var(--sub);cursor:pointer;transition:background .12s,color .12s;
+  white-space:nowrap;
+}
+.tab-btn[aria-selected="true"]{background:var(--card);color:var(--accent);border-color:var(--line);position:relative;}
+.tab-btn[aria-selected="true"]::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:1px;background:var(--card);}
+.tab-btn:hover:not([aria-selected="true"]){background:var(--ac-soft);color:var(--accent)}
+.tab-divider{height:1px;background:var(--line);margin:0 -30px;width:calc(100% + 60px)}
+
+/* header bottom area */
+.hd-body{padding:20px 0 22px}
 
 /* typography */
 .eyebrow{font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.08em}
@@ -123,7 +139,8 @@ tr.sub .tscroll{background:var(--card)}
 
 @media(max-width:640px){
   .kpis{grid-template-columns:1fr 1fr}
-  .hd{padding:24px 20px 20px}.box{padding:20px 18px}
+  .hd{padding:24px 20px 0}.box{padding:20px 18px}
+  .tab-divider{margin:0 -20px;width:calc(100% + 40px)}
 }
 </style>
 
@@ -132,15 +149,19 @@ tr.sub .tscroll{background:var(--card)}
   <header class="box hd">
     <div class="eyebrow">SEOUL LINK · 브랜드 리포트</div>
     <h1>브랜드 현황 레포트 <button class="refresh-btn" id="refreshBtn" type="button">↻ 새로고침</button></h1>
-    <div class="period num" id="period">불러오는 중…</div>
-    <div class="kpis num" id="kpis">
-      <div class="kpi"><b>—</b><span>섭외 현황</span><em>전체 인원</em></div>
-      <div class="kpi"><b>—</b><span>확정 금액</span><em>단가 합계</em></div>
-      <div class="kpi"><b>—</b><span>예상 조회수</span><em>평균 조회수 합</em></div>
-      <div class="kpi"><b>—</b><span>업로드</span><em>업로드날짜 입력</em></div>
+    <nav class="tabs" role="tablist" id="tablist"></nav>
+    <div class="tab-divider"></div>
+    <div class="hd-body">
+      <div class="period num" id="period">불러오는 중…</div>
+      <div class="kpis num" id="kpis">
+        <div class="kpi"><b>—</b><span>섭외 현황</span><em>전체 인원</em></div>
+        <div class="kpi"><b>—</b><span>확정 금액</span><em>단가 합계</em></div>
+        <div class="kpi"><b>—</b><span>예상 조회수</span><em>평균 조회수 합</em></div>
+        <div class="kpi"><b>—</b><span>업로드</span><em>업로드날짜 입력</em></div>
+      </div>
+      <ul class="summary" id="summary"></ul>
+      <div id="hd-err"></div>
     </div>
-    <ul class="summary" id="summary"></ul>
-    <div id="hd-err"></div>
   </header>
 
   <section class="box" aria-labelledby="h-cast">
@@ -163,7 +184,34 @@ tr.sub .tscroll{background:var(--card)}
 
 <script>
 const SHEET_ID = '1u3SYt8TXQHiL4yLXT5yG83vkXwzz95A5hFW6b-Bx5Gs';
-const SHEET_NAME = '크림라벨';
+
+const BRANDS = [
+  { label: '앰플레이그라운드', sheet: '앰플레이그라운드_광장시장' },
+  { label: '플라워노즈',       sheet: '플라워노즈' },
+  { label: '크림라벨',         sheet: '크림라벨' },
+];
+
+let currentBrand = 0;
+const cache = {};
+
+/* ── tabs ────────────────────────────────────────────── */
+function buildTabs() {
+  const tl = document.getElementById('tablist');
+  tl.innerHTML = BRANDS.map((b, i) =>
+    `<button class="tab-btn" role="tab" aria-selected="${i===0}" data-idx="${i}">${b.label}</button>`
+  ).join('');
+  tl.addEventListener('click', e => {
+    const btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    const idx = +btn.dataset.idx;
+    if (idx === currentBrand) return;
+    currentBrand = idx;
+    tl.querySelectorAll('.tab-btn').forEach((b,i) => b.setAttribute('aria-selected', String(i===idx)));
+    clearSubs();
+    if (cache[idx]) render(cache[idx]);
+    else load();
+  });
+}
 
 /* ── utils ──────────────────────────────────────────── */
 function str(v) {
@@ -208,8 +256,8 @@ const STAGES = [
 const stageMap = new Map(STAGES.map(s=>[s.k,s]));
 
 /* ── fetch & parse ──────────────────────────────────── */
-async function fetchData() {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}&range=A:P`;
+async function fetchData(sheetName) {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(sheetName)}&range=A:P`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Google Sheets 응답 오류 (HTTP ${res.status})`);
   const text = await res.text();
@@ -253,6 +301,11 @@ function fitSubs() {
 }
 addEventListener('resize', fitSubs);
 
+function clearSubs() {
+  document.querySelectorAll('tr.sub').forEach(r => r.remove());
+  document.querySelectorAll('tr.click').forEach(r => r.setAttribute('aria-expanded','false'));
+}
+
 const DETAILS = {};
 let seq = 0;
 const reg = (rows, fn) => { const k = 'd'+(++seq); DETAILS[k] = {rows, fn}; return k; };
@@ -271,7 +324,7 @@ function toggle(tr) {
 }
 document.addEventListener('click', e => {
   const tr = e.target.closest('tr.click');
-  if (tr && !e.target.closest('a')) toggle(tr);
+  if (tr && !e.target.closest('a') && !e.target.closest('.tab-btn')) toggle(tr);
 });
 document.addEventListener('keydown', e => {
   const tr = e.target.closest?.('tr.click');
@@ -304,6 +357,7 @@ function peopleTable(rows) {
 
 /* ── render ─────────────────────────────────────────── */
 function render(rows) {
+  const brand = BRANDS[currentBrand];
   const now = new Date();
   const timeStr = now.toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
 
@@ -312,8 +366,7 @@ function render(rows) {
   const ups  = rows.filter(r => r.uploadDate).length;
   const done = rows.filter(r => r.status === '완료').length;
 
-  /* header */
-  document.getElementById('period').textContent = `${timeStr} 기준 · 크림라벨 시트`;
+  document.getElementById('period').textContent = `${timeStr} 기준 · ${brand.label} 시트`;
   document.getElementById('kpis').innerHTML = `
     <div class="kpi"><b>${rows.length}명</b><span>섭외 현황</span><em>전체 인원</em></div>
     <div class="kpi"><b>${rows.length ? fWon(totalPrice) : '—'}</b><span>확정 금액</span><em>단가 합계</em></div>
@@ -322,7 +375,6 @@ function render(rows) {
   document.getElementById('summary').innerHTML =
     `<li>전체 <strong>${rows.length}명</strong> · 완료 <strong>${done}명</strong> · 진행 중 <strong>${rows.length-done}명</strong> · 확정 금액 <strong>${fWon(totalPrice)}</strong></li>`;
 
-  /* stage bar */
   const stageRows = STAGES.map(s => ({...s, rows: rows.filter(r => r.status === s.k)}));
   document.getElementById('stagebar').innerHTML = rows.length
     ? stageRows.filter(s=>s.rows.length)
@@ -330,7 +382,6 @@ function render(rows) {
         .join('')
     : '';
 
-  /* stages table */
   document.getElementById('stages').innerHTML = `<div class="tscroll"><table class="num">
     <tr><th>단계 (누르면 목록)</th><th>인원</th><th>금액</th></tr>
     ${stageRows.map(s=>`
@@ -344,7 +395,6 @@ function render(rows) {
     </tr>
   </table></div>`;
 
-  /* upload insights */
   const uploaded = rows.filter(r => r.uploadDate)
     .slice().sort((a,b) => str(b.uploadDate).localeCompare(str(a.uploadDate)) || a.id.localeCompare(b.id));
   document.getElementById('uploads').innerHTML = uploaded.length
@@ -368,7 +418,7 @@ function render(rows) {
     : '<div class="empty">아직 업로드된 게시물이 없습니다.</div>';
 
   document.getElementById('foot').textContent =
-    `출처: Google Sheets 「크림라벨」 · ${timeStr} 자동 갱신`;
+    `출처: Google Sheets 「${brand.label}」 · ${timeStr} 자동 갱신`;
 }
 
 /* ── load & auto-refresh ────────────────────────────── */
@@ -380,12 +430,15 @@ async function load() {
   const btn = document.getElementById('refreshBtn');
   btn.disabled = true;
   document.getElementById('hd-err').innerHTML = '';
+  const idx = currentBrand;
   try {
-    const rows = await fetchData();
-    render(rows);
+    const rows = await fetchData(BRANDS[idx].sheet);
+    cache[idx] = rows;
+    if (idx === currentBrand) render(rows);
   } catch(e) {
-    document.getElementById('hd-err').innerHTML =
-      `<div class="err-box">⚠ ${esc(e.message)}<br><small>스프레드시트 공유 설정 → "링크가 있는 모든 사용자 보기"로 변경하면 접근 가능합니다.</small></div>`;
+    if (idx === currentBrand)
+      document.getElementById('hd-err').innerHTML =
+        `<div class="err-box">⚠ ${esc(e.message)}<br><small>스프레드시트 공유 설정 → "링크가 있는 모든 사용자 보기"로 변경하면 접근 가능합니다.</small></div>`;
   } finally {
     busy = false;
     btn.disabled = false;
@@ -397,6 +450,11 @@ function schedule() {
   timer = setTimeout(() => load().then(schedule), 60_000);
 }
 
-document.getElementById('refreshBtn').addEventListener('click', () => load().then(schedule));
+document.getElementById('refreshBtn').addEventListener('click', () => {
+  delete cache[currentBrand];
+  load().then(schedule);
+});
+
+buildTabs();
 load().then(schedule);
 </script>
