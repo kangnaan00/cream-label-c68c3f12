@@ -1,0 +1,402 @@
+<title>크림라벨</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap">
+<style>
+/* 단일 컬럼 960px. 헤더 KPI → 진행현황(stage bar + 접힘 표) → 업로드 인사이트 */
+:root {
+  --bg: #f2f4f7; --card: #fff; --ink: #0b0f19; --sub: #5b6472; --mute: #8b93a1;
+  --line: #e6e9ef; --accent: #3182F6; --ac-soft: #eaf2fe; --row: #f7f9fc;
+  --ok: #12b886; --ok-s: #e6f8f2; --warn: #b45309; --warn-s: #fdf3e5;
+  --shadow: 0 1px 16px rgba(0,0,0,.05);
+  --font: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#0f1218;--card:#181c24;--ink:#eef1f6;--sub:#a3abb8;--mute:#7a8391;
+    --line:#2a303b;--accent:#5a9cf8;--ac-soft:#1a2a42;--row:#1d222c;
+    --ok:#3ccf9e;--ok-s:#14302a;--warn:#f0a74a;--warn-s:#33261a;
+    --shadow:0 1px 16px rgba(0,0,0,.35);color-scheme:dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg:#0f1218;--card:#181c24;--ink:#eef1f6;--sub:#a3abb8;--mute:#7a8391;
+  --line:#2a303b;--accent:#5a9cf8;--ac-soft:#1a2a42;--row:#1d222c;
+  --ok:#3ccf9e;--ok-s:#14302a;--warn:#f0a74a;--warn-s:#33261a;
+  --shadow:0 1px 16px rgba(0,0,0,.35);color-scheme:dark;
+}
+
+*{box-sizing:border-box;margin:0}
+body{
+  font-family:var(--font);font-size:14px;color:var(--ink);background:var(--bg);
+  line-height:1.6;letter-spacing:-.01em;-webkit-font-smoothing:antialiased;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0 64px;
+}
+a{color:inherit;text-decoration:none}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:6px}
+img{max-width:100%}
+.num{font-variant-numeric:tabular-nums}
+
+/* layout */
+.wrap{max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.box{background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:24px 26px;min-width:0}
+.hd{border-radius:0 0 16px 16px;padding:30px 30px 22px}
+
+/* typography */
+.eyebrow{font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.08em}
+h1{font-size:24px;font-weight:900;letter-spacing:-.03em;margin:7px 0 3px;text-wrap:balance;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.period{color:var(--sub);font-size:13.5px}
+h2{font-size:17px;font-weight:900;letter-spacing:-.02em}
+.h2sub{font-size:12.5px;color:var(--mute);font-weight:600;margin:3px 0 12px}
+.fn{font-size:12px;color:var(--mute);margin-top:8px}
+.foot{text-align:center;font-size:12px;color:var(--mute)}
+
+/* kpi row */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px}
+.kpi{border:1px solid var(--line);border-radius:12px;padding:13px 10px;text-align:center}
+.kpi b{display:block;font-size:22px;font-weight:900;letter-spacing:-.03em;color:var(--accent)}
+.kpi span{font-size:11.5px;color:var(--sub);font-weight:700}
+.kpi em{display:block;font-style:normal;font-size:11px;color:var(--mute);font-weight:600;margin-top:2px}
+
+/* summary bullets */
+.summary{margin-top:16px;display:flex;flex-direction:column;gap:6px;font-size:14.5px;padding:0}
+.summary li{list-style:none;padding-left:14px;position:relative}
+.summary li::before{content:"";position:absolute;left:0;top:.7em;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+.summary strong{font-weight:800}
+
+/* table */
+.tscroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:13px;white-space:nowrap}
+th,td{padding:9px 12px;text-align:right;border-top:1px solid var(--line)}
+th{background:var(--row);color:var(--sub);font-size:12px;font-weight:800;border-top:0}
+th:first-child,td:first-child,td.l,th.l{text-align:left}
+td.c,th.c{text-align:center}
+td a{color:var(--accent);font-weight:700}
+td a:hover{text-decoration:underline}
+td.na{color:var(--mute)}
+tr.total td{font-weight:900;background:var(--row)}
+.tag{display:inline-block;font-size:11.5px;font-weight:800;border-radius:6px;padding:1px 7px;color:var(--sub);background:var(--row);border:1px solid var(--line)}
+
+/* click-to-expand rows */
+tr.click{cursor:pointer}
+tr.click:hover td,tr.click[aria-expanded="true"] td{background:var(--ac-soft)}
+tr.click:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+tr.click td:first-child{color:var(--accent);font-weight:800}
+.chev{display:inline-block;font-size:10px;margin-right:6px;transition:transform .15s}
+tr.click[aria-expanded="true"] .chev{transform:rotate(90deg)}
+tr.sub>td{padding:10px 12px 14px;background:var(--row);text-align:left;white-space:normal}
+tr.sub .tscroll{background:var(--card)}
+@media(prefers-reduced-motion:reduce){.chev{transition:none}}
+.empty{font-size:13px;color:var(--mute);padding:16px;text-align:center;border:1px dashed var(--line);border-radius:10px}
+
+/* sticky first column */
+.tscroll th:first-child,.tscroll td:first-child{position:sticky;left:0;z-index:1;background:var(--card);box-shadow:inset -1px 0 0 var(--line)}
+.tscroll th:first-child{background:var(--row);z-index:2}
+.tscroll tr.total td:first-child{background:var(--row)}
+.tscroll tr.click:hover td:first-child,.tscroll tr.click[aria-expanded="true"] td:first-child{background:var(--ac-soft)}
+.tscroll tr.sub>td:first-child{position:static;box-shadow:none;background:var(--row)}
+
+/* stage bar */
+.stagebar{display:flex;height:12px;border-radius:6px;overflow:hidden;background:var(--row);margin:4px 0 10px}
+.stagebar i{display:block;height:100%}
+.dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:0}
+
+/* 7 stage palette */
+.st1{background:#c8daf7}.st2{background:#9db8e8}.st3{background:#5f95e6}
+.st4{background:#3182F6}.st5{background:#1fa88a}.st6{background:#12b886}.st7{background:#0b8a66}
+.tag.s1{color:#6b8bb0;background:#f0f5fc;border-color:transparent}
+.tag.s2{color:#3f6fa0;background:#deeaf8;border-color:transparent}
+.tag.s3,.tag.s4{color:var(--accent);background:var(--ac-soft);border-color:transparent}
+.tag.s5{color:#0e7a60;background:#e0f7f1;border-color:transparent}
+.tag.s6,.tag.s7{color:var(--ok);background:var(--ok-s);border-color:transparent}
+
+/* refresh button */
+.refresh-btn{font-family:var(--font);font-size:12px;font-weight:800;color:var(--sub);background:var(--row);border:1px solid var(--line);border-radius:20px;padding:4px 12px;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.refresh-btn:hover{color:var(--ink);border-color:var(--accent)}
+.refresh-btn:disabled{opacity:.5;cursor:default}
+
+/* error notice */
+.err-box{background:var(--warn-s);color:var(--warn);border-radius:10px;padding:12px 16px;font-size:13px;font-weight:700;margin-top:12px;line-height:1.6}
+.err-box small{font-weight:600;opacity:.8}
+
+@media(max-width:640px){
+  .kpis{grid-template-columns:1fr 1fr}
+  .hd{padding:24px 20px 20px}.box{padding:20px 18px}
+}
+</style>
+
+<div class="wrap">
+
+  <header class="box hd">
+    <div class="eyebrow">SEOUL LINK · 브랜드 리포트</div>
+    <h1>크림라벨 <button class="refresh-btn" id="refreshBtn" type="button">↻ 새로고침</button></h1>
+    <div class="period num" id="period">불러오는 중…</div>
+    <div class="kpis num" id="kpis">
+      <div class="kpi"><b>—</b><span>섭외 현황</span><em>전체 인원</em></div>
+      <div class="kpi"><b>—</b><span>확정 금액</span><em>단가 합계</em></div>
+      <div class="kpi"><b>—</b><span>예상 조회수</span><em>평균 조회수 합</em></div>
+      <div class="kpi"><b>—</b><span>업로드</span><em>업로드날짜 입력</em></div>
+    </div>
+    <ul class="summary" id="summary"></ul>
+    <div id="hd-err"></div>
+  </header>
+
+  <section class="box" aria-labelledby="h-cast">
+    <h2 id="h-cast">1. 섭외 진행현황</h2>
+    <div class="h2sub">단계 줄을 누르면 인플루언서 목록이 펼쳐지고, 다시 누르면 접힙니다.</div>
+    <div class="stagebar" id="stagebar"></div>
+    <div id="stages"><div class="empty">데이터를 불러오는 중…</div></div>
+  </section>
+
+  <section class="box" aria-labelledby="h-up">
+    <h2 id="h-up">2. 업로드 인사이트</h2>
+    <div class="h2sub">업로드날짜가 입력된 게시물만 표시됩니다.</div>
+    <div id="uploads"><div class="empty">데이터를 불러오는 중…</div></div>
+    <div class="fn">결과 CPV = 단가 ÷ 조회수 · 저장공유단가 = 단가 ÷ (저장 + 공유)</div>
+  </section>
+
+  <div class="foot num" id="foot"></div>
+
+</div>
+
+<script>
+const SHEET_ID = '1RFkiteE24h7AQFj53OJ8izxHrzk4NUKBe7FzDG-Vc-8';
+const SHEET_NAME = '크림라벨';
+
+/* ── utils ──────────────────────────────────────────── */
+function str(v) {
+  if (v == null) return '';
+  if (typeof v === 'string' && v.startsWith('Date(')) {
+    const p = v.slice(5, -1).split(',').map(Number);
+    return `${p[1]+1}.${String(p[2]).padStart(2,'0')}`;
+  }
+  return String(v).trim();
+}
+function num(v) {
+  if (v == null) return null;
+  if (typeof v === 'number') return v;
+  const n = parseFloat(String(v).replace(/[,₩원\s]/g, ''));
+  return isNaN(n) ? null : n;
+}
+const fN   = v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR');
+const fWon = v => v == null ? '—' : Math.round(v).toLocaleString('ko-KR') + '원';
+const fCpv = v => v == null ? '—' : (Math.abs(v) < 100 ? v.toFixed(2) : Math.round(v).toLocaleString('ko-KR')) + '원';
+const fMan = v => {
+  if (v == null) return '—';
+  if (v >= 10000) return (v/1e4).toLocaleString('ko-KR',{maximumFractionDigits:v>=1e6?0:1})+'만';
+  return fN(v);
+};
+const div  = (a,b) => a!=null && b ? a/b : null;
+const esc  = s => String(s??'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const aLink= (url,txt) => /^https?:\/\//.test(url)
+  ? `<a href="${esc(url)}" target="_blank" rel="noopener">${txt}</a>`
+  : `<span class="na">${txt||'—'}</span>`;
+const tdN  = (v, f=fN) => `<td${v==null?' class="na"':''}>${f(v)}</td>`;
+
+/* ── stages ─────────────────────────────────────────── */
+const STAGES = [
+  {k:'협상완료',    label:'협상 완료',       cls:'st1', tag:'s1'},
+  {k:'대표님확정',  label:'대표님 확정',     cls:'st2', tag:'s2'},
+  {k:'방문일정확정',label:'방문 일정 확정',  cls:'st3', tag:'s3'},
+  {k:'촬영완료',    label:'촬영 완료',       cls:'st4', tag:'s4'},
+  {k:'컨펌완료',    label:'컨펌 완료',       cls:'st5', tag:'s5'},
+  {k:'업로드완료',  label:'업로드 완료',     cls:'st6', tag:'s6'},
+  {k:'완료',        label:'완료',            cls:'st7', tag:'s7'},
+];
+const stageMap = new Map(STAGES.map(s=>[s.k,s]));
+
+/* ── fetch & parse ──────────────────────────────────── */
+async function fetchData() {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}&range=A:P`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Google Sheets 응답 오류 (HTTP ${res.status})`);
+  const text = await res.text();
+  const m = text.match(/setResponse\(([\s\S]*)\)\s*;?\s*$/);
+  if (!m) throw new Error('응답 형식을 파싱할 수 없습니다.');
+  const parsed = JSON.parse(m[1]);
+  if (parsed.status === 'error') throw new Error(parsed.errors?.[0]?.detailed_message || '시트를 불러올 수 없습니다.');
+  const { table } = parsed;
+  const rows = [];
+  for (const r of (table.rows || [])) {
+    const c = (r.c || []).map(x => x?.v ?? null);
+    if (!c[0]) continue;
+    rows.push({
+      id:          str(c[0]),
+      link:        str(c[1]),
+      status:      str(c[2]),
+      price:       num(c[3]),
+      partnerCode: str(c[4]),
+      cpvExp:      num(c[5]),
+      avgViews:    num(c[6]),
+      ssCostExp:   num(c[7]),
+      shootDate:   str(c[8]),
+      confirmDate: str(c[9]),
+      uploadDate:  str(c[10]),
+      uploadLink:  str(c[11]),
+      resSaves:    num(c[12]),
+      resShares:   num(c[13]),
+      resCpv:      num(c[14]),
+      payInfo:     str(c[15]),
+    });
+  }
+  return rows;
+}
+
+/* ── expand / collapse rows ─────────────────────────── */
+function fitSubs() {
+  document.querySelectorAll('tr.sub > td > .subwrap').forEach(w => {
+    const outer = w.closest('.tscroll');
+    if (outer) w.style.width = Math.max(280, outer.clientWidth - 26) + 'px';
+  });
+}
+addEventListener('resize', fitSubs);
+
+const DETAILS = {};
+let seq = 0;
+const reg = (rows, fn) => { const k = 'd'+(++seq); DETAILS[k] = {rows, fn}; return k; };
+const clickRow = (rows, cols, fn, cls='') =>
+  `class="click${cls}" data-d="${reg(rows,fn)}" data-cols="${cols}" tabindex="0" role="button" aria-expanded="false"`;
+const chev = '<span class="chev" aria-hidden="true">▶</span>';
+
+function toggle(tr) {
+  const open = tr.nextElementSibling?.classList.contains('sub');
+  const d = DETAILS[tr.dataset.d];
+  if (open) tr.nextElementSibling.remove();
+  else tr.insertAdjacentHTML('afterend',
+    `<tr class="sub"><td colspan="${tr.dataset.cols}"><div class="subwrap">${d.fn(d.rows)}</div></td></tr>`);
+  fitSubs();
+  tr.setAttribute('aria-expanded', String(!open));
+}
+document.addEventListener('click', e => {
+  const tr = e.target.closest('tr.click');
+  if (tr && !e.target.closest('a')) toggle(tr);
+});
+document.addEventListener('keydown', e => {
+  const tr = e.target.closest?.('tr.click');
+  if (tr && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggle(tr); }
+});
+
+/* ── people table (stage detail) ────────────────────── */
+function peopleTable(rows) {
+  if (!rows.length) return '<div class="empty">이 단계에 인원이 없습니다.</div>';
+  const list = rows.slice().sort((a,b) =>
+    (str(a.shootDate)||'9').localeCompare(str(b.shootDate)||'9') || a.id.localeCompare(b.id));
+  return `<div class="tscroll"><table class="num">
+    <tr>
+      <th>아이디</th><th class="c">진행상태</th><th>단가</th><th>예상 CPV</th>
+      <th>평균조회수</th><th class="c">촬영날짜</th><th class="c">컨펌날짜</th><th class="c">업로드날짜</th>
+    </tr>
+    ${list.map(r => {
+      const s = stageMap.get(r.status);
+      return `<tr>
+        <td>${aLink(r.link, esc(r.id))}</td>
+        <td class="c"><span class="tag${s?' '+s.tag:''}">${esc(r.status)||'—'}</span></td>
+        ${tdN(r.price,fWon)}${tdN(r.cpvExp,fCpv)}${tdN(r.avgViews)}
+        <td class="c${r.shootDate?'':' na'}">${esc(r.shootDate)||'—'}</td>
+        <td class="c${r.confirmDate?'':' na'}">${esc(r.confirmDate)||'—'}</td>
+        <td class="c${r.uploadDate?'':' na'}">${esc(r.uploadDate)||'—'}</td>
+      </tr>`;
+    }).join('')}
+  </table></div>`;
+}
+
+/* ── render ─────────────────────────────────────────── */
+function render(rows) {
+  const now = new Date();
+  const timeStr = now.toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+
+  const totalPrice    = rows.reduce((s,r) => s+(r.price||0), 0);
+  const totalAvgViews = rows.reduce((s,r) => s+(r.avgViews||0), 0);
+  const ups  = rows.filter(r => r.uploadDate).length;
+  const done = rows.filter(r => r.status === '완료').length;
+
+  /* header */
+  document.getElementById('period').textContent = `${timeStr} 기준 · 크림라벨 시트`;
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi"><b>${rows.length}명</b><span>섭외 현황</span><em>전체 인원</em></div>
+    <div class="kpi"><b>${rows.length ? fWon(totalPrice) : '—'}</b><span>확정 금액</span><em>단가 합계</em></div>
+    <div class="kpi"><b>${totalAvgViews ? fMan(totalAvgViews) : '—'}</b><span>예상 조회수</span><em>평균 조회수 합</em></div>
+    <div class="kpi"><b>${ups}편</b><span>업로드</span><em>업로드날짜 입력</em></div>`;
+  document.getElementById('summary').innerHTML =
+    `<li>전체 <strong>${rows.length}명</strong> · 완료 <strong>${done}명</strong> · 진행 중 <strong>${rows.length-done}명</strong> · 확정 금액 <strong>${fWon(totalPrice)}</strong></li>`;
+
+  /* stage bar */
+  const stageRows = STAGES.map(s => ({...s, rows: rows.filter(r => r.status === s.k)}));
+  document.getElementById('stagebar').innerHTML = rows.length
+    ? stageRows.filter(s=>s.rows.length)
+        .map(s=>`<i class="${s.cls}" style="width:${s.rows.length/rows.length*100}%" title="${s.label} ${s.rows.length}명"></i>`)
+        .join('')
+    : '';
+
+  /* stages table */
+  document.getElementById('stages').innerHTML = `<div class="tscroll"><table class="num">
+    <tr><th>단계 (누르면 목록)</th><th>인원</th><th>금액</th></tr>
+    ${stageRows.map(s=>`
+    <tr ${clickRow(s.rows, 3, peopleTable)}>
+      <td>${chev}<span class="dot ${s.cls}"></span>${s.label}</td>
+      <td>${s.rows.length}명</td>
+      <td>${fWon(s.rows.reduce((a,r)=>a+(r.price||0),0))}</td>
+    </tr>`).join('')}
+    <tr ${clickRow(rows, 3, peopleTable, ' total')}>
+      <td>${chev}합계</td><td>${rows.length}명</td><td>${fWon(totalPrice)}</td>
+    </tr>
+  </table></div>`;
+
+  /* upload insights */
+  const uploaded = rows.filter(r => r.uploadDate)
+    .slice().sort((a,b) => str(b.uploadDate).localeCompare(str(a.uploadDate)) || a.id.localeCompare(b.id));
+  document.getElementById('uploads').innerHTML = uploaded.length
+    ? `<div class="tscroll"><table class="num">
+      <tr>
+        <th>아이디</th><th class="c">업로드날짜</th><th class="c">게시물</th>
+        <th>단가</th><th>저장</th><th>공유</th><th>저장+공유</th>
+        <th>결과 CPV</th><th>저장공유단가</th>
+      </tr>
+      ${uploaded.map(r => {
+        const ss = (r.resSaves!=null||r.resShares!=null) ? (r.resSaves||0)+(r.resShares||0) : null;
+        return `<tr>
+          <td>${aLink(r.link, esc(r.id))}</td>
+          <td class="c">${esc(r.uploadDate)}</td>
+          <td class="c">${r.uploadLink ? aLink(r.uploadLink,'게시물 ↗') : '<span class="na">—</span>'}</td>
+          ${tdN(r.price,fWon)}${tdN(r.resSaves)}${tdN(r.resShares)}${tdN(ss)}
+          ${tdN(r.resCpv,fCpv)}${tdN(div(r.price,ss),fWon)}
+        </tr>`;
+      }).join('')}
+    </table></div>`
+    : '<div class="empty">아직 업로드된 게시물이 없습니다.</div>';
+
+  document.getElementById('foot').textContent =
+    `출처: Google Sheets 「크림라벨」 · ${timeStr} 자동 갱신`;
+}
+
+/* ── load & auto-refresh ────────────────────────────── */
+let busy = false, timer = null;
+
+async function load() {
+  if (busy) return;
+  busy = true;
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  document.getElementById('hd-err').innerHTML = '';
+  try {
+    const rows = await fetchData();
+    render(rows);
+  } catch(e) {
+    document.getElementById('hd-err').innerHTML =
+      `<div class="err-box">⚠ ${esc(e.message)}<br><small>스프레드시트 공유 설정 → "링크가 있는 모든 사용자 보기"로 변경하면 접근 가능합니다.</small></div>`;
+  } finally {
+    busy = false;
+    btn.disabled = false;
+  }
+}
+
+function schedule() {
+  clearTimeout(timer);
+  timer = setTimeout(() => load().then(schedule), 60_000);
+}
+
+document.getElementById('refreshBtn').addEventListener('click', () => load().then(schedule));
+load().then(schedule);
+</script>
